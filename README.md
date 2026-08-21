@@ -60,7 +60,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```env
-MONGODB_URI=mongodb://localhost:27017](MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/stellar_info?retryWrites=true&w=majority)
+MONGODB_URI="mongodb+srv://<username>:<password>@30DaysOfPython.lyxbsfc.mongodb.net/?appName=30DaysOfPython"
 ```
 
 ### Running the API
