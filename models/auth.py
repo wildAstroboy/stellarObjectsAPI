@@ -26,8 +26,8 @@ from database.configurations import user_db
 password_hash = PasswordHash.recommended()
 DUMMY_HASH = password_hash.hash('dummypassword')
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
+SECRET_KEY = os.getenv('SECRET_KEY')
+ALGORITHM = os.getenv('ALGORITHM')
 
 # User Auth Bodies
 class Token(BaseModel):
@@ -50,8 +50,8 @@ class UserInDB(User):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
 
 async def get_user(db, username: str) -> dict | None:
-    # Queries MongoDB for a document containing the username key (e.g., {"wildAstroboy": {"$exists": true}})
-    raw_user = await db.find_one({username: {"$exists": True}})
+    # Queries MongoDB for a document containing the username key (e.g., {'wildAstroboy': {'$exists': true}})
+    raw_user = await db.find_one({username: {'$exists': True}})
     if raw_user:
         return individual_user_serializer(raw_user)
     return None
@@ -77,19 +77,19 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+    to_encode.update({'exp': expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        detail='Could not validate credentials',
+        headers={'WWW-Authenticate': 'Bearer'},
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
+        username = payload.get('sub')
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
@@ -104,5 +104,5 @@ async def get_current_active_user(
     current_user: Annotated[dict, Depends(get_current_user)],
 ):
     if current_user.get('disabled'):
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail='Inactive user')
     return current_user

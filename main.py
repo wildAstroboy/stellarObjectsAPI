@@ -53,7 +53,7 @@ async def get_root(request: Request,
     return {'Welcome to the Stellar Objects API!'}
 
 # JWT Token
-@app.post("/token", tags=['Auth'])
+@app.post('/token', tags=['Auth'])
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
     user = await authenticate_user(user_db['collection'],
@@ -62,14 +62,14 @@ async def login_for_access_token(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail='Incorrect username or password',
+            headers={'WWW-Authenticate': 'Bearer'},
         )
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
-        data={"sub": user['username']}, expires_delta=access_token_expires
+        data={'sub': user['username']}, expires_delta=access_token_expires
     )
-    return Token(access_token=access_token, token_type="bearer")
+    return Token(access_token=access_token, token_type='bearer')
 
 # Logged in user information
 @app.get('/users/me', tags=['Auth'])
@@ -145,7 +145,7 @@ async def get_star(request: Request,
           tags=['stars'],
           dependencies=[Depends(cache_evict(eviction_group='stars'))])
 
-@limiter.limit("5/minute")
+@limiter.limit('5/minute')
 async def add_star(request: Request,
                    response: Response,
                    star: Annotated[Star, Form()],
@@ -174,7 +174,7 @@ async def add_star(request: Request,
          response_model=PutResponse,
          tags=['stars'],
          dependencies=[Depends(cache_evict(eviction_group='stars'))])
-@limiter.limit("5/minute")
+@limiter.limit('5/minute')
 async def update_star(request: Request,
                       star_id: str,
                       star: Annotated[Star, Form()],
@@ -196,7 +196,7 @@ async def update_star(request: Request,
             response_model=DeleteResponse,
             tags=['stars'],
             dependencies=[Depends(cache_evict(eviction_group='stars'))])
-@limiter.limit("10/day")
+@limiter.limit('10/day')
 async def delete_star(request: Request,
                       response: Response,
                       star_id: str,
