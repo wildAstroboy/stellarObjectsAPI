@@ -1,18 +1,26 @@
-from typing import Annotated
-
 import uvicorn
-from fastapi import FastAPI, APIRouter, Form, HTTPException, Depends, Request, Response
+
+from typing import Annotated
+from bson import ObjectId
+from datetime import datetime, timedelta, UTC
+
+from fastapi import FastAPI, APIRouter, Form, HTTPException, Depends, Request, Response, Body, status
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi_pagination import Page, add_pagination, paginate
+
 from redis_fastapi import FastAPIRedis, cache, cache_evict, cache_put, default_key_builder
+
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+
 from starlette.responses import JSONResponse
 
-from database.configurations import lifespan, db_client
-from models.stars_model import Star
+from database.configurations import lifespan, db_client, user_db
+from models.models import Star, example
+from models.auth import Token, User, oauth2_scheme, authenticate_user, create_access_token, get_current_active_user
 from schema.schemas import list_serializer
-from bson import ObjectId
-from datetime import datetime, UTC
+
 
 
 # Configure Fast API and Caching
@@ -24,6 +32,9 @@ app = FastAPI(lifespan=lifespan,
 
 FastAPIRedis(app).lifespan().caching()
 app.include_router(router)
+
+# Pagination
+add_pagination(app)
 
 # Limiter
 limiter = Limiter(key_func=get_remote_address,
@@ -39,6 +50,28 @@ async def get_root(request: Request,
                    response: Response,):
     return {'Welcome to the Stellar Objects API!'}
 
+@app.post("/token", tags=['Auth'])
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+    user = await authenticate_user(user_db['collection'],
+                                   form_data.username,
+                                   form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=30)
+    access_token = create_access_token(
+        data={"sub": user['username']}, expires_delta=access_token_expires
+    )
+    return Token(access_token=access_token, token_type="bearer")
+
+@app.get('/users/me', tags=['Auth'])
+async def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]) -> User:
+    return current_user
+
 @app.get('/stars',
          tags=['stars'],
          dependencies=[Depends(cache(ttl=300,
@@ -49,8 +82,10 @@ async def get_stars(request: Request,
                     name: str | None = None,
                     constellation: str | None = None,
                     spectral_class: str | None = None,
-                    type: str | None = None,
-                    category: str | None = None,):
+                    evolutionary_stage: str | None = None,
+                    category: str | None = None,
+                    is_multi_star: bool | None = None,
+                    has_planets: bool | None = None) -> Page[Star]:
 
     # MongoDB Collection
     star_collection = db_client['collection']
@@ -59,8 +94,10 @@ async def get_stars(request: Request,
     fields = {'name': name,
               'constellation': constellation,
               'spectral_class': spectral_class,
-              'type': type,
-              'category': category
+              'evolutionary_stage': evolutionary_stage,
+              'category': category,
+              'is_multi_star': is_multi_star,
+              'has_planets': has_planets
               }
 
     for key, value in fields.items():
@@ -71,7 +108,7 @@ async def get_stars(request: Request,
     raw_data = await cursor.to_list(length=100)
 
     stars = list_serializer(raw_data)
-    return stars
+    return paginate(stars)
 
 @app.get('/stars/{star_id}',
          tags=['stars'],
@@ -101,7 +138,8 @@ async def get_star(request: Request,
 @limiter.limit("5/minute")
 async def add_star(request: Request,
                    response: Response,
-                   star: Annotated[Star, Form()]):
+                   star: Annotated[Star, Form(), Body(examples=example)],
+                   token: Annotated[str, Depends(oauth2_scheme)]):
 
     # MongoDB Collection
     star_collection = db_client['collection']
@@ -111,7 +149,8 @@ async def add_star(request: Request,
     await star_collection.insert_one(star_dict)
 
     return JSONResponse(content={'message':'Star added successfully!',
-                                 'status': '201'}, status_code=201)
+                                 'status': '201',
+                                 'token': token}, status_code=201)
 
 @app.put('/stars/{star_id}',
          tags=['stars'],
@@ -121,7 +160,8 @@ async def add_star(request: Request,
 @limiter.limit("5/minute")
 async def update_star(request: Request,
                       star_id: str,
-                      star: Annotated[Star, Form()]):
+                      star: Annotated[Star, Form(), Body(examples=example)],
+                      token: Annotated[str, Depends(oauth2_scheme)]):
 
     # MongoDB Collection
     star_collection = db_client['collection']
@@ -131,7 +171,8 @@ async def update_star(request: Request,
     await star_collection.update_one({'_id': ObjectId(star_id)},{'$set': star_dict}, upsert=True)
 
     return JSONResponse(content={'message':'Star updated successfully!',
-                                 'status': '200'}, status_code=200)
+                                 'status': '200',
+                                 'token': token}, status_code=200)
 
 @app.delete('/stars/{star_id}',
             tags=['stars'],
@@ -140,14 +181,16 @@ async def update_star(request: Request,
 @limiter.limit("10/day")
 async def delete_star(request: Request,
                       response: Response,
-                      star_id: str):
+                      star_id: str,
+                      token: Annotated[str, Depends(oauth2_scheme)]):
     # MongoDB Collection
     star_collection = db_client['collection']
 
     await star_collection.delete_one({'_id': ObjectId(star_id)})
 
     return JSONResponse(content={'message':'Star deleted successfully!',
-                                 'status': '200'}, status_code=200)
+                                 'status': '200',
+                                 'token': token}, status_code=200)
 
 if __name__ == '__main__':
     uvicorn.run(app, host='127.0.0.1', port=8000)
