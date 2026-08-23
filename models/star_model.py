@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+from pydantic_core.core_schema import json_schema
 
 # Example
 example = {
@@ -62,3 +63,41 @@ class Star(BaseModel):
     has_planets: bool
     planet_count: int
     planet_names: List[str]
+
+    model_config = {
+        'json_schema_extra': {
+            'example': {
+                "id": "6a89e4800d3d5bbf83db7040",
+                "name": "Sun",
+                "mass": 1.0,
+                "constellation": "None (Solar System)",
+                "distance_light_years": 0.0000158,
+                "apparent_magnitude": -26.74,
+                "absolute_magnitude": -0.17,
+                "spectral_class": "G2V",
+                "evolutionary_stage": "Main Sequence",
+                "variable_type": "None",
+                "category": "Star",
+                "right_ascension": "N/A (Solar System reference point)",
+                "declination": "N/A (Solar System reference point)",
+                "temperature_kelvin": 5700,
+                "surface_gravity_log_g": 4.4,
+                "rotation": "Not well constrained / estimated",
+                "age_billion_years": 4.6,
+                "is_multi_star": False,
+                "companion_stars": [],
+                "has_planets": True,
+                "planet_count": 8,
+                "planet_names": [
+                    "Mercury",
+                    "Venus",
+                    "Earth",
+                    "Mars",
+                    "Jupiter",
+                    "Saturn",
+                    "Uranus",
+                    "Neptune"
+                ]
+            }
+        }
+    }

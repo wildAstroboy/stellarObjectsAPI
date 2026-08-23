@@ -139,19 +139,24 @@ async def get_star(request: Request,
 # Add a star
 @app.post('/stars',
           tags=['stars'],
-          dependencies=[Depends(cache_put(ttl=300,
-                                          eviction_group='stars',
-                                          key_builder=default_key_builder))])
+          dependencies=[Depends(cache_evict(eviction_group='stars'))])
+
 @limiter.limit("5/minute")
 async def add_star(request: Request,
                    response: Response,
-                   star: Annotated[Star, Form(), Body(examples=example)],
+                   star: Annotated[Star, Form()],
                    token: Annotated[str, Depends(oauth2_scheme)]):
 
     # MongoDB Collection
     star_collection = db_client['collection']
 
     star_dict = star.model_dump()
+    name = star_dict.get('name')
+
+    existing_star = await star_collection.find_one({'name': name})
+    if existing_star:
+        raise HTTPException(status_code=400, detail='Star already exists')
+
     star_dict['created_at'] = datetime.now(tz=UTC)
     await star_collection.insert_one(star_dict)
 
@@ -162,13 +167,11 @@ async def add_star(request: Request,
 # Update fields for a star
 @app.put('/stars/{star_id}',
          tags=['stars'],
-         dependencies=[Depends(cache_put(ttl=300,
-                                         eviction_group='stars',
-                                         key_builder=default_key_builder))])
+         dependencies=[Depends(cache_evict(eviction_group='stars'))])
 @limiter.limit("5/minute")
 async def update_star(request: Request,
                       star_id: str,
-                      star: Annotated[Star, Form(), Body(examples=example)],
+                      star: Annotated[Star, Form()],
                       token: Annotated[str, Depends(oauth2_scheme)]):
 
     # MongoDB Collection
@@ -185,8 +188,7 @@ async def update_star(request: Request,
 # Delete a star
 @app.delete('/stars/{star_id}',
             tags=['stars'],
-            dependencies=[Depends(cache_evict(eviction_group='stars',
-                                                key_builder=default_key_builder))])
+            dependencies=[Depends(cache_evict(eviction_group='stars'))])
 @limiter.limit("10/day")
 async def delete_star(request: Request,
                       response: Response,
