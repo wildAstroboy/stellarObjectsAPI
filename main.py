@@ -1,6 +1,6 @@
 import uvicorn
 
-from typing import Annotated
+from typing import Annotated, List
 from bson import ObjectId
 from datetime import datetime, timedelta, UTC
 
@@ -8,7 +8,7 @@ from fastapi import FastAPI, APIRouter, Form, HTTPException, Depends, Request, R
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_pagination import Page, add_pagination, paginate
 
-from redis_fastapi import FastAPIRedis, cache, cache_evict, cache_put, default_key_builder
+from redis_fastapi import FastAPIRedis, cache, cache_evict
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -18,8 +18,9 @@ from starlette.responses import JSONResponse
 
 # Imports from other files.
 from database.configurations import lifespan, db_client, user_db
-from models.star_model import Star, example
+from models.star_model import Star
 from models.auth import Token, User, oauth2_scheme, authenticate_user, create_access_token, get_current_active_user
+from models.response_model import PostResponse, PutResponse, DeleteResponse
 from schema.schemas import list_serializer
 
 
@@ -118,6 +119,7 @@ async def get_stars(request: Request,
 # Get star by id
 @app.get('/stars/{star_id}',
          tags=['stars'],
+         response_model=List[Star],
          dependencies=[Depends(cache(ttl=300,
                                      eviction_group='stars'))])
 @limiter.limit('200/day; 20/hour')
@@ -138,6 +140,8 @@ async def get_star(request: Request,
 
 # Add a star
 @app.post('/stars',
+          status_code=201,
+          response_model=PostResponse,
           tags=['stars'],
           dependencies=[Depends(cache_evict(eviction_group='stars'))])
 
@@ -162,10 +166,12 @@ async def add_star(request: Request,
 
     return JSONResponse(content={'message':'Star added successfully!',
                                  'status': '201',
-                                 'token': token}, status_code=201)
+                                 'token': token},
+                        status_code=201)
 
 # Update fields for a star
 @app.put('/stars/{star_id}',
+         response_model=PutResponse,
          tags=['stars'],
          dependencies=[Depends(cache_evict(eviction_group='stars'))])
 @limiter.limit("5/minute")
@@ -187,6 +193,7 @@ async def update_star(request: Request,
 
 # Delete a star
 @app.delete('/stars/{star_id}',
+            response_model=DeleteResponse,
             tags=['stars'],
             dependencies=[Depends(cache_evict(eviction_group='stars'))])
 @limiter.limit("10/day")
