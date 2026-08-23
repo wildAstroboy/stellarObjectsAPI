@@ -16,8 +16,9 @@ from slowapi.util import get_remote_address
 
 from starlette.responses import JSONResponse
 
+# Imports from other files.
 from database.configurations import lifespan, db_client, user_db
-from models.models import Star, example
+from models.star_model import Star, example
 from models.auth import Token, User, oauth2_scheme, authenticate_user, create_access_token, get_current_active_user
 from schema.schemas import list_serializer
 
@@ -50,6 +51,7 @@ async def get_root(request: Request,
                    response: Response,):
     return {'Welcome to the Stellar Objects API!'}
 
+# JWT Token
 @app.post("/token", tags=['Auth'])
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
@@ -68,10 +70,12 @@ async def login_for_access_token(
     )
     return Token(access_token=access_token, token_type="bearer")
 
+# Logged in user information
 @app.get('/users/me', tags=['Auth'])
 async def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]) -> User:
     return current_user
 
+# Show default star data
 @app.get('/stars',
          tags=['stars'],
          dependencies=[Depends(cache(ttl=300,
@@ -90,6 +94,7 @@ async def get_stars(request: Request,
     # MongoDB Collection
     star_collection = db_client['collection']
 
+    # Filtering
     query = {}
     fields = {'name': name,
               'constellation': constellation,
@@ -110,6 +115,7 @@ async def get_stars(request: Request,
     stars = list_serializer(raw_data)
     return paginate(stars)
 
+# Get star by id
 @app.get('/stars/{star_id}',
          tags=['stars'],
          dependencies=[Depends(cache(ttl=300,
@@ -130,6 +136,7 @@ async def get_star(request: Request,
         raise HTTPException(status_code=404, detail='Star not found')
     return star
 
+# Add a star
 @app.post('/stars',
           tags=['stars'],
           dependencies=[Depends(cache_put(ttl=300,
@@ -152,6 +159,7 @@ async def add_star(request: Request,
                                  'status': '201',
                                  'token': token}, status_code=201)
 
+# Update fields for a star
 @app.put('/stars/{star_id}',
          tags=['stars'],
          dependencies=[Depends(cache_put(ttl=300,
@@ -174,6 +182,7 @@ async def update_star(request: Request,
                                  'status': '200',
                                  'token': token}, status_code=200)
 
+# Delete a star
 @app.delete('/stars/{star_id}',
             tags=['stars'],
             dependencies=[Depends(cache_evict(eviction_group='stars',
@@ -192,5 +201,6 @@ async def delete_star(request: Request,
                                  'status': '200',
                                  'token': token}, status_code=200)
 
+# Run Uvicorn Server
 if __name__ == '__main__':
     uvicorn.run(app, host='127.0.0.1', port=8000)

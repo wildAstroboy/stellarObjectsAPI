@@ -22,13 +22,14 @@ database_path = os.path.join(current_dir, '../database')
 
 from database.configurations import user_db
 
+# Password hashing
 password_hash = PasswordHash.recommended()
 DUMMY_HASH = password_hash.hash('dummypassword')
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 
-# User Bodies
+# User Auth Bodies
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -46,7 +47,6 @@ class UserInDB(User):
     hashed_password: str
 
 # OAuth2 User Functions
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
 
 async def get_user(db, username: str) -> dict | None:

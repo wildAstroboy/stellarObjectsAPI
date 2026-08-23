@@ -14,13 +14,16 @@ user_db = {}
 # Create lifespan context manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
     # Configure the MongoDB Database and Collection
     mongodb_uri = os.getenv('MONGODB_URI')
     db_client['client'] = pymongo.AsyncMongoClient(mongodb_uri)
 
+    # Star collection
     db_client['db'] = db_client['client']['stellar_objects']
     db_client['collection'] = db_client['db']['stellar_info']
 
+    # User collection
     user_db['db'] = db_client['client']['stellar_objects']
     user_db['collection'] = db_client['db']['admin_users']
 

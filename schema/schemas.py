@@ -1,3 +1,4 @@
+# Fetch star data from collection
 def individual_serializer(star) -> dict:
     fields = {
         'id': str(star['_id']),
@@ -39,6 +40,7 @@ def list_serializer(star_list) -> list:
 
     return [individual_serializer(star) for star in star_list]
 
+# Fetch user data from collection
 def individual_user_serializer(user) -> dict:
 
     username_key = next((k for k in user.keys() if k != '_id'), None)
@@ -55,8 +57,3 @@ def individual_user_serializer(user) -> dict:
     }
 
     return fields
-"""
-def list_user_serializer(user_list) -> list:
-
-    return [individual_user_serializer(user) for user in user_list]
-"""
