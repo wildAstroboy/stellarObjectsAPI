@@ -46,7 +46,7 @@ app.add_exception_handler(RateLimitExceeded,
                           _rate_limit_exceeded_handler)
 
 # Root endpoint
-@app.get('/', tags=['root'])
+@app.get('/', tags=['Root'])
 @limiter.limit('100/day; 5/minute')
 async def get_root(request: Request,
                    response: Response,):
@@ -78,7 +78,7 @@ async def read_user_me(current_user: Annotated[User, Depends(get_current_active_
 
 # Show default star data
 @app.get('/stars',
-         tags=['stars'],
+         tags=['Stellar Info'],
          dependencies=[Depends(cache(ttl=300,
                                      eviction_group='stars'))])
 @limiter.limit('200/day; 20/hour')
@@ -118,7 +118,7 @@ async def get_stars(request: Request,
 
 # Get star by id
 @app.get('/stars/{star_id}',
-         tags=['stars'],
+         tags=['Stellar Info'],
          response_model=List[Star],
          dependencies=[Depends(cache(ttl=300,
                                      eviction_group='stars'))])
@@ -142,7 +142,7 @@ async def get_star(request: Request,
 @app.post('/stars',
           status_code=201,
           response_model=PostResponse,
-          tags=['stars'],
+          tags=['Stellar Info'],
           dependencies=[Depends(cache_evict(eviction_group='stars'))])
 
 @limiter.limit('5/minute')
@@ -172,7 +172,7 @@ async def add_star(request: Request,
 # Update fields for a star
 @app.put('/stars/{star_id}',
          response_model=PutResponse,
-         tags=['stars'],
+         tags=['Stellar Info'],
          dependencies=[Depends(cache_evict(eviction_group='stars'))])
 @limiter.limit('5/minute')
 async def update_star(request: Request,
@@ -194,7 +194,7 @@ async def update_star(request: Request,
 # Delete a star
 @app.delete('/stars/{star_id}',
             response_model=DeleteResponse,
-            tags=['stars'],
+            tags=['Stellar Info'],
             dependencies=[Depends(cache_evict(eviction_group='stars'))])
 @limiter.limit('10/day')
 async def delete_star(request: Request,
